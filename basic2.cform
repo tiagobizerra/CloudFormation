@@ -3,17 +3,18 @@
 
   "Mappings" : {
     "NatRegionMap" : {
-      "us-east-1"      : { "AMI" : "ami-184dc970" },
-      "us-west-1"      : { "AMI" : "ami-a98396ec" },
-      "us-west-2"      : { "AMI" : "ami-290f4119" },
-      "eu-west-1"      : { "AMI" : "ami-14913f63" },
-      "eu-central-1"   : { "AMI" : "ami-ae380eb3" },
-      "sa-east-1"      : { "AMI" : "ami-8122969c" },
-      "ap-southeast-1" : { "AMI" : "ami-6aa38238" },
-      "ap-southeast-2" : { "AMI" : "ami-893f53b3" },
+      "us-east-1"      : { "AMI" : "ami-08111162" },
+      "us-west-1"      : { "AMI" : "ami-1b0f7d7b" },
+      "us-west-2"      : { "AMI" : "ami-c229c0a2" },
+      "eu-west-1"      : { "AMI" : "ami-31328842" },
+      "eu-central-1"   : { "AMI" : "ami-e2df388d" },
+      "sa-east-1"      : { "AMI" : "ami-1e159872" },
+      "ap-southeast-1" : { "AMI" : "ami-e90dc68a" },
+      "ap-southeast-2" : { "AMI" : "ami-f2210191" },
+      "ap-northeast-2" : { "AMI" : "ami-6598510b" },
+      "cn-north-1"     : { "AMI" : "ami-49e22924" },
       "ap-northeast-1" : { "AMI" : "ami-27d6e626" }
     }
-
   },
 
   "Parameters" : {
@@ -164,15 +165,15 @@
   		}
   	},
 
-  	"MyPrivateRoute" : {
-  		"DependsOn" : ["MyVPC"],
-  		"Type" : "AWS::EC2::Route",
-  		"Properties" : {
-  			"RouteTableId" : { "Ref" : "MyPrivateRouteTable" },
-  			"DestinationCidrBlock" : "0.0.0.0/0",
-  			"InstanceId" : { "Ref" : "MyNatInstance" } 
-  		}
-  	},
+    "MyPrivateRoute" : {
+      "DependsOn" : ["MyVPC"],
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "MyPrivateRouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "InstanceId" : { "Ref" : "MyNatInstance" } 
+      }
+    },
 
   	"MyPublicSubnetRouteTable1" : {
   		"DependsOn" : [ "MyPublicSubnet1", "MyPublicRouteTable" ],
@@ -232,12 +233,18 @@
   		"Properties" : {
   			"GroupDescription" : "NAT Security Group",
   			"VpcId" : { "Ref" : "MyVPC" },
-  			"SecurityGroupIngress" : [{
+  			"SecurityGroupIngress" : [
+        {
   				"IpProtocol" : "tcp",
   				"FromPort" : "22",
   				"ToPort" : "22",
   				"CidrIp" : { "Ref" : "ServerAccess" }
-  			 }],
+  			 },
+         {
+          "IpProtocol" : "-1",
+          "CidrIp" : "172.17.0.0/16"
+         }
+         ],
   			"Tags" : [{ "Key": "Name", "Value" : "NAT Security Group" }]
   		}
   	},
@@ -249,12 +256,20 @@
   			"InstanceType" : "t2.micro",
   			"KeyName" : { "Ref" : "KeyName" },
   			"SourceDestCheck" : "false",
- 			"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+ 			  "ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
 	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ],
+        "NetworkInterfaces" : [ {
+            "GroupSet" : [{ "Ref": "MyNatSecurityGroup"}],
+            "AssociatePublicIpAddress" : "true",
+            "DeviceIndex" : "0",
+            "DeleteOnTermination" : "true",
+            "SubnetId" : { "Ref" : "MyPublicSubnet1" }
+          }],
  			"UserData": {
 			"Fn::Base64": {
 				"Fn::Join": ["",
-				["#!/bin/bash -v\n",
+				["#!/bin/bash -x\n",
+        "exec &> /tmp/userdata.log\n\n",
 				"yum update -y aws*\n",
 				"# Configure iptables\n",
 				"/sbin/iptables -t nat -A POSTROUTING -o eth0 -s 0.0.0.0/0 -j MASQUERADE\n",
@@ -279,7 +294,7 @@
     		"KeyName" : { "Ref" : "KeyName"},
     		"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
     		"SubnetId" : { "Ref" : "MyPublicSubnet1" },
-    		"SecurityGroups" : { "Ref" : "MySecurityGroup" },
+    		"SecurityGroupIds" : [{ "Ref" : "MySecurityGroup" }],
 	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ]
     	}
     },
@@ -290,7 +305,7 @@
     		"KeyName" : { "Ref" : "KeyName"},
     		"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
     		"SubnetId" : { "Ref" : "MyPublicSubnet2" },
-    		"SecurityGroups" : { "Ref" : "MySecurityGroup" },
+    		"SecurityGroupIds" : [{ "Ref" : "MySecurityGroup" }],
 	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ]
     	}
     },
@@ -301,7 +316,7 @@
     		"KeyName" : { "Ref" : "KeyName"},
     		"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
     		"SubnetId" : { "Ref" : "MyPrivateSubnet1" },
-    		"SecurityGroups" : { "Ref" : "MySecurityGroup" },
+    		"SecurityGroupIds" : [{ "Ref" : "MySecurityGroup" }],
 	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ]
     	}
     },
@@ -312,7 +327,7 @@
     		"KeyName" : { "Ref" : "KeyName"},
     		"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
     		"SubnetId" : { "Ref" : "MyPrivateSubnet2" },
-    		"SecurityGroups" : { "Ref" : "MySecurityGroup" },
+    		"SecurityGroupIds" : [{ "Ref" : "MySecurityGroup" }],
 	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ]
     	}
     },
@@ -323,7 +338,7 @@
     		"KeyName" : { "Ref" : "KeyName"},
     		"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
     		"SubnetId" : { "Ref" : "MyPrivateSubnet3" },
-    		"SecurityGroups" : { "Ref" : "MySecurityGroup" },
+    		"SecurityGroupIds" : [{ "Ref" : "MySecurityGroup" }],
 	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ]
     	}
     },
@@ -334,9 +349,40 @@
     		"KeyName" : { "Ref" : "KeyName"},
     		"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
     		"SubnetId" : { "Ref" : "MyPrivateSubnet4" },
-    		"SecurityGroups" : { "Ref" : "MySecurityGroup" },
+    		"SecurityGroupIds" : [{ "Ref" : "MySecurityGroup" }],
 	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ]
     	}
     }
-  }  	
+  },
+
+  "Outputs" : {
+    "NatInstanceId" : {
+      "Description" : "The NAT Instance ID",
+      "Value" : { "Ref" : "MyNatInstance" }
+    },
+    "MyInstanceOnPublicSubnet1" : {
+      "Description" : "Test instance on MyPublicSubnet1",
+      "Value" : { "Ref": "MyInstanceOnPublicSubnet1"}
+    },
+    "MyInstanceOnPublicSubnet2" : {
+      "Description" : "Test instance on MyPublicSubnet2",
+      "Value" : { "Ref": "MyInstanceOnPublicSubnet2"}
+    },
+    "MyInstanceOnPrivateSubnet1" : {
+      "Description" : "Test instance on MyPrivateSubnet1",
+      "Value" : { "Ref": "MyInstanceOnPrivateSubnet1"}
+    },
+    "MyInstanceOnPrivateSubnet2" : {
+      "Description" : "Test instance on MyPrivateSubnet2",
+      "Value" : { "Ref": "MyInstanceOnPrivateSubnet2"}
+    },
+    "MyInstanceOnPrivateSubnet3" : {
+      "Description" : "Test instance on MyPrivateSubnet3",
+      "Value" : { "Ref": "MyInstanceOnPrivateSubnet3"}
+    },
+        "MyInstanceOnPrivateSubnet4" : {
+      "Description" : "Test instance on MyPrivateSubnet4",
+      "Value" : { "Ref": "MyInstanceOnPrivateSubnet4"}
+    }
+  }	
 }
