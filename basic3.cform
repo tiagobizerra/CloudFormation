@@ -1,0 +1,237 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+
+  "Mappings" : {
+    "NatRegionMap" : {
+      "us-east-1"      : { "AMI" : "ami-08111162" },
+      "us-west-1"      : { "AMI" : "ami-1b0f7d7b" },
+      "us-west-2"      : { "AMI" : "ami-c229c0a2" },
+      "eu-west-1"      : { "AMI" : "ami-31328842" },
+      "eu-central-1"   : { "AMI" : "ami-e2df388d" },
+      "sa-east-1"      : { "AMI" : "ami-1e159872" },
+      "ap-southeast-1" : { "AMI" : "ami-e90dc68a" },
+      "ap-southeast-2" : { "AMI" : "ami-f2210191" },
+      "ap-northeast-2" : { "AMI" : "ami-6598510b" },
+      "cn-north-1"     : { "AMI" : "ami-49e22924" },
+      "ap-northeast-1" : { "AMI" : "ami-27d6e626" }
+    }
+  },
+
+  "Parameters" : {
+   "KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the web server",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "255",
+      "AllowedPattern" : "[\\x20-\\x7E]*",
+      "ConstraintDescription" : "can contain only ASCII characters."
+    },
+   "ServerAccess" : {
+      "Description" : "CIDR IP range allowed to login to the NAT instance",
+      "Type" : "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default" : "0.0.0.0/0",
+      "AllowedPattern" : "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription" : "must be a valid CIDR range of the form x.x.x.x/x."
+    },
+    "LoadBalancingPort" : {
+    	"Description" : "Port number for the LoadBalancer",
+    	"Type": "String",
+    	"MinLength" : "1",
+    	"MaxLength" : "5",
+    	"AllowedPattern" : "[0-9]*",
+    	"ConstraintDescription" : "Can contain only numbers"
+    },
+        "SubnetId" : {
+	    "Description" : "Subnet that will be used to create instances",
+   		"Type": "String",
+      	"MinLength": "1",
+      	"MaxLength": "255",
+      	"AllowedPattern" : "[\\x20-\\x7E]*",
+      	"ConstraintDescription" : "can contain only ASCII characters."
+    },
+        "SecurityGroupIds" : {
+	    "Description" : "Security group that will be used to create instances",
+   		"Type": "String",
+      	"MinLength": "1",
+      	"MaxLength": "255",
+      	"AllowedPattern" : "[\\x20-\\x7E]*",
+      	"ConstraintDescription" : "can contain only ASCII characters."
+    }
+  },
+
+  "Resources" : {
+  	"MyELB" : {
+  		"DependsOn" : ["MyInstance1", "MyInstance2"],
+  		"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+  		"Properties" : {
+  			"Listeners" : [ {
+  				"InstancePort" : { "Ref" : "LoadBalancingPort"},
+  				"InstanceProtocol" : "HTTP",
+  				"LoadBalancerPort" : { "Ref" : "LoadBalancingPort"},
+  				"Protocol" : "HTTP"
+  			} ],
+  			"Subnets" : [ { "Ref" : "SubnetId" } ],
+  			"Instances" : [ { "Ref" : "MyInstance1" }, { "Ref" : "MyInstance2"} ],
+  			"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ]
+  		}
+  	},
+
+  	"MyInstance1" : {
+  		"Type" : "AWS::EC2::Instance",
+  		"Metadata" : {
+  			"AWS::CloudFormation::Init" : {
+  				"configSets" : {
+  					"Install" : [ "Install" ]
+  				},
+  				"Install" : {
+  					"packages" : {
+  						"yum" : {
+  							"httpd" : [],
+  							"php" : []
+  						}
+  					},
+      				"files" : {
+  						"/var/www/html/index.php" : {
+  							"content" : { "Fn::Join" : [ "", [
+  							"<?php\n",
+  							"phpinfo();\n",
+  							"?>\n"
+  							]]
+  							},
+  						"mode" : "000600",
+  						"owner" : "apache",
+  						"group" : "apache"
+  						}
+  					},
+  					"services" : {
+  						"sysvinit" : {
+  							"httpd" : { "enabled" : "true", "ensureRunning" : "true" }
+  						}
+  					}
+  				}
+  			}
+  		},
+  		"Properties" : {
+  			"InstanceType" : "t2.nano",
+    		"KeyName" : { "Ref" : "KeyName"},
+    		"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+    		"SubnetId" : { "Ref" : "SubnetId" },
+    		"SecurityGroupIds" : [ { "Ref" : "SecurityGroupIds" } ],
+	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ],
+	  		"UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "exec &> /tmp/userdata.log\n\n",
+             "yum update -y aws-cfn-bootstrap\n",
+             "# Install the files and packages from the metadata\n",
+             "/opt/aws/bin/cfn-init -v ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource MyInstance1 ",
+             "         --configsets Install ",
+             "         --region ", { "Ref" : "AWS::Region" }, 
+             "\n",
+             "/opt/aws/bin/cfn-signal -e 0 -r \"Instance Creation Complete\" ", { "Ref" : "WaitHandle" },
+         	"'\n"
+			]]}}
+  		}
+  	},
+  	"WaitHandle" : {
+     	"Type" : "AWS::CloudFormation::WaitConditionHandle"
+   	},
+   	"WaitCondition" : {
+     	"Type" : "AWS::CloudFormation::WaitCondition",
+     	"DependsOn" : "MyInstance1",
+     		"Properties" : {
+         	"Handle" : { "Ref" : "WaitHandle" },
+         	"Timeout" : "300"
+    	}
+    },
+
+  	"MyInstance2" : {
+  		"Type" : "AWS::EC2::Instance",
+  		"Metadata" : {
+  			"AWS::CloudFormation::Init" : {
+  				"configSets" : {
+  					"Install" : [ "Install" ]
+  				},
+  				"Install" : {
+  					"packages" : {
+  						"yum" : {
+  							"httpd" : [],
+  							"php" : []
+  						}
+  					},
+      				"files" : {
+  						"/var/www/html/index.php" : {
+  							"content" : { "Fn::Join" : [ "", [
+  							"<?php\n",
+  							"phpinfo();\n",
+  							"?>\n"
+  							]]
+  							},
+  						"mode" : "000600",
+  						"owner" : "apache",
+  						"group" : "apache"
+  						}
+  					},
+  					"services" : {
+  						"sysvinit" : {
+  							"httpd" : { "enabled" : "true", "ensureRunning" : "true" }
+  						}
+  					}
+  				}
+  			}
+  		},
+  		"Properties" : {
+  			"InstanceType" : "t2.nano",
+    		"KeyName" : { "Ref" : "KeyName"},
+    		"ImageId" : { "Fn::FindInMap" : [ "NatRegionMap", { "Ref" : "AWS::Region" }, "AMI" ]},
+    		"SubnetId" : { "Ref" : "SubnetId" },
+    		"SecurityGroupIds" : [ { "Ref" : "SecurityGroupIds" } ],
+	  		"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ],
+	  		"UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "exec &> /tmp/userdata.log\n\n",
+             "yum update -y aws-cfn-bootstrap\n",
+             "# Install the files and packages from the metadata\n",
+             "/opt/aws/bin/cfn-init -v ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource MyInstance1 ",
+             "         --configsets Install ",
+             "         --region ", { "Ref" : "AWS::Region" }, 
+             "\n",
+             "/opt/aws/bin/cfn-signal -e 0 -r \"Instance Creation Complete\" ", { "Ref" : "WaitHandle" },
+         	"'\n"
+			]]}}
+  		}
+  	},
+
+  	"WaitHandle" : {
+     	"Type" : "AWS::CloudFormation::WaitConditionHandle"
+   	},
+   	"WaitCondition" : {
+     	"Type" : "AWS::CloudFormation::WaitCondition",
+     	"DependsOn" : "MyInstance2",
+     		"Properties" : {
+         	"Handle" : { "Ref" : "WaitHandle" },
+         	"Timeout" : "300"
+    	}
+    }
+  },
+
+  "Outputs" : {
+    "MyELBId" : {
+      "Description" : "The ELB ID",
+      "Value" : { "Ref" : "MyELB" }
+  	},
+  	"MyInstance1" : {
+  		"Description" : "MyInstance1 ID",
+  		"Value" : { "Ref" : "MyInstance1" }
+  	},
+  	"MyInstance2" : {
+  		"Description" : "MyInstance2 ID",
+  		"Value" : { "Ref" : "MyInstance2" }
+  	}
+  }	
+}
