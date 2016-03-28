@@ -131,19 +131,19 @@
              "         --configsets Install ",
              "         --region ", { "Ref" : "AWS::Region" }, 
              "\n",
-             "/opt/aws/bin/cfn-signal -e 0 -r \"Instance Creation Complete\" ", { "Ref" : "WaitHandle" },
+             "/opt/aws/bin/cfn-signal -e 0 -r \"Instance Creation Complete\" ", { "Ref" : "WaitHandle1" },
           "'\n"
       ]]}}
       }
     },
-    "WaitHandle" : {
+    "WaitHandle1" : {
       "Type" : "AWS::CloudFormation::WaitConditionHandle"
     },
     "WaitCondition" : {
       "Type" : "AWS::CloudFormation::WaitCondition",
       "DependsOn" : "MyInstance1",
         "Properties" : {
-          "Handle" : { "Ref" : "WaitHandle" },
+          "Handle" : { "Ref" : "WaitHandle1" },
           "Timeout" : "300"
       }
     },
@@ -201,20 +201,20 @@
              "         --configsets Install ",
              "         --region ", { "Ref" : "AWS::Region" }, 
              "\n",
-             "/opt/aws/bin/cfn-signal -e 0 -r \"Instance Creation Complete\" ", { "Ref" : "WaitHandle" },
+             "/opt/aws/bin/cfn-signal -e 0 -r \"Instance Creation Complete\" ", { "Ref" : "WaitHandle2" },
           "'\n"
       ]]}}
       }
     },
 
-    "WaitHandle" : {
+    "WaitHandle2" : {
       "Type" : "AWS::CloudFormation::WaitConditionHandle"
     },
     "WaitCondition" : {
       "Type" : "AWS::CloudFormation::WaitCondition",
       "DependsOn" : "MyInstance2",
         "Properties" : {
-          "Handle" : { "Ref" : "WaitHandle" },
+          "Handle" : { "Ref" : "WaitHandle2" },
           "Timeout" : "300"
       }
     }
