@@ -17,10 +17,6 @@
     }
   },
 
-  "Conditions" : {
-    "AZQuantity" : { "Fn::GetAZs" : { "Ref" : "AWS::Region" } }
-  },
-
   "Parameters" : {
    "KeyName": {
       "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the web server",
@@ -52,7 +48,6 @@
   			"Tags" : [ { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } } ]
   		}
   	},
-
   	"MyInternetGateway" : {
   		"Type" : "AWS::EC2::InternetGateway",
   		"Properties" : {

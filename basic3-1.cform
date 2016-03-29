@@ -197,7 +197,7 @@
              "# Install the files and packages from the metadata\n",
              "/opt/aws/bin/cfn-init -v ",
              "         --stack ", { "Ref" : "AWS::StackName" },
-             "         --resource MyInstance1 ",
+             "         --resource MyInstance2 ",
              "         --configsets Install ",
              "         --region ", { "Ref" : "AWS::Region" }, 
              "\n",
@@ -223,7 +223,7 @@
   "Outputs" : {
     "MyELBId" : {
       "Description" : "The ELB ID",
-      "Value" : { "Ref" : "MyELB" }
+      "Value" : { "Ref" : "MyELB" } 
     },
     "MyInstance1" : {
       "Description" : "MyInstance1 ID",
