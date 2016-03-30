@@ -204,6 +204,10 @@
       "Description" : "The Elastic Load Balance ID",
       "Value" : { "Ref" : "MyELB" }
     },
+    "MyASGId" : {
+      "Description" : "The Auto Scaling Group ID",
+      "Value" : { "Ref" : "MyASG" }
+    },
     "MyLCid" : {
       "Description" : "The Launch Configuration ID",
       "Value" : { "Ref" : "MyLC" }
