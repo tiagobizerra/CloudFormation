@@ -35,7 +35,7 @@
       "AllowedPattern" : "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
       "ConstraintDescription" : "must be a valid CIDR range of the form x.x.x.x/x."
     },
-    "LoadBalancingPort" : {
+    "LoadBalancerPort" : {
     	"Description" : "Port number for the LoadBalancer",
     	"Type": "String",
     	"MinLength" : "1",
@@ -67,9 +67,9 @@
   		"Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
   		"Properties" : {
   			"Listeners" : [ {
-  				"InstancePort" : { "Ref" : "LoadBalancingPort"},
+  				"InstancePort" : { "Ref" : "LoadBalancerPort"},
   				"InstanceProtocol" : "HTTP",
-  				"LoadBalancerPort" : { "Ref" : "LoadBalancingPort"},
+  				"LoadBalancerPort" : { "Ref" : "LoadBalancerPort"},
   				"Protocol" : "HTTP"
   			} ],
   			"Subnets" : [ { "Ref" : "SubnetId" } ],
@@ -208,7 +208,7 @@
   "Outputs" : {
     "MyELBId" : {
       "Description" : "The ELB ID",
-      "Value" : { "Ref" : "MyELB" }
+      "Value" : { "Fn::GetAtt" : [ "MyELB", "CanonicalHostedZoneName" ] }
   	},
   	"MyInstance1" : {
   		"Description" : "MyInstance1 ID",
