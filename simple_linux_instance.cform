@@ -21,6 +21,11 @@
       "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
       "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
    },
+    "SecurityGroupId" : {
+      "Description" : "Security group that will be used to create instances",
+      "Default" : "sg-bec7a5da",
+      "Type" : "AWS::EC2::SecurityGroup::Id"
+    },
    "AMIName" : {
     "Description" : "Specify an AMI to create the instance",
     "Default" : "ami-31328842",
