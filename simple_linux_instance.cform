@@ -26,6 +26,11 @@
       "Default" : "sg-bec7a5da",
       "Type" : "AWS::EC2::SecurityGroup::Id"
     },
+   "InstanceType" : {
+    "Type" : "String",
+    "Default" : "t2.micro",
+    "Description" : "Choose the instance type"
+   },
    "AMIName" : {
     "Description" : "Specify an AMI to create the instance",
     "Default" : "ami-31328842",
@@ -38,9 +43,9 @@
   		"Properties" : {
   			"AvailabilityZone" : "eu-west-1a",
   			"InstanceType" : "t2.nano",
-        "ImageId" : { "Ref" : "AMIName" }
         "KeyName" : { "Ref" : "KeyName" },
-        "SecurityGroupIds" : [ { "Ref" : "SecurityGroupId" } ],
+        "SecurityGroupIds" : [ { "Ref" : "SecurityGroupId" } ] ,
+        "ImageId" : { "Ref" : "AMIName" }
   		}
   	}
   },
