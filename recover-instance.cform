@@ -21,21 +21,38 @@
    },
    "AMIName" : {
     "Description" : "Specify an AMI to create the instance",
-    "Type" : "AWS::EC2::Image::Id",
-    "Default" : "ami-8aa67cf9"
+    "Type" : "AWS::EC2::Image::Id"
    }
   },
 
   "Resources" : {
-  	"EC2Instance": {
-  		"Type" : "AWS::EC2::Instance",
-  		"Properties" : {
-  			"AvailabilityZone" : "eu-west-1a",
-  			"InstanceType" : "t2.nano",
-        "ImageId" : { "Ref" : "AMIName" },
-	"KeyName" : { "Ref" : "KeyName"}
-  		}
-  	},
+    "EC2Instance": {
+ 	"Type" : "AWS::EC2::Instance",
+  	"Properties" : {
+  	  "AvailabilityZone" : "eu-west-1a",
+  	  "InstanceType" : "t2.nano",
+	  "KeyName" : { "Ref" : "KeyName" },
+          "ImageId" : { "Ref" : "AMIName" }
+  	}
+    },
+    "EC2Instance2": {
+ 	"Type" : "AWS::EC2::Instance",
+  	"Properties" : {
+  	  "AvailabilityZone" : "eu-west-1a",
+  	  "InstanceType" : "t2.nano",
+	  "KeyName" : { "Ref" : "KeyName" },
+          "ImageId" : { "Ref" : "AMIName" }
+  	}
+    },
+    "EC2Instance3": {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "AvailabilityZone" : "eu-west-1a",
+        "InstanceType" : "t2.nano",
+	"KeyName" : { "Ref" : "KeyName" },
+        "ImageId" : { "Ref" : "AMIName" }
+      }
+    },
     "MyEIP": {
       "Type": "AWS::EC2::EIP",
       "Properties": {
@@ -46,6 +63,15 @@
   },
 
   "Outputs" : {
+    "EC2Instance" : {
+      "Value" : { "Ref" : "EC2Instance" }
+    },
+    "EC2Instance2" : {
+      "Value" : { "Ref" : "EC2Instance2" }
+    },
+    "EC2Instance3" : {
+      "Value" : { "Ref" : "EC2Instance3" }
+    },
     "ElasticIP" : {
       "Value" : { "Ref" : "MyEIP" }
     }

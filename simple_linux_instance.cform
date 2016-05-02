@@ -1,5 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
+  "Description" : "EC2 Amazon Linux March 2016 instance",
 
   "Parameters" : {
     "KeyName" : {
@@ -8,6 +9,7 @@
       "MinLength": "1",
       "MaxLength": "255",
       "AllowedPattern" : "[\\x20-\\x7E]*",
+      "Default" : "tiaglima-key-pair-euwest1",
       "ConstraintDescription" : "can contain only ASCII characters."
     },
   "SSHLocation" : {
@@ -21,34 +23,24 @@
    },
    "AMIName" : {
     "Description" : "Specify an AMI to create the instance",
-    "Type" : "AWS::EC2::Image::Id",
-    "Default" : "ami-8aa67cf9"
+    "Default" : "ami-31328842",
+    "Type" : "AWS::EC2::Image::Id"
    }
   },
-
   "Resources" : {
   	"EC2Instance": {
   		"Type" : "AWS::EC2::Instance",
   		"Properties" : {
   			"AvailabilityZone" : "eu-west-1a",
   			"InstanceType" : "t2.nano",
-        "ImageId" : { "Ref" : "AMIName" },
-	"KeyName" : { "Ref" : "KeyName"}
+        "ImageId" : { "Ref" : "AMIName" }
   		}
-  	},
-    "MyEIP": {
-      "Type": "AWS::EC2::EIP",
-      "Properties": {
-        "Domain": "vpc",
-        "InstanceId" : { "Ref" : "EC2Instance" }
-      }
-    }
+  	}
   },
-
   "Outputs" : {
-    "ElasticIP" : {
-      "Value" : { "Ref" : "MyEIP" }
+    "Instance" : {
+      "Value" : { "Ref" : "EC2Instance" }
     }
-
   }
 }
+
