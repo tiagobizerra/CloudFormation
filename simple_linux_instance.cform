@@ -39,6 +39,7 @@
   			"AvailabilityZone" : "eu-west-1a",
   			"InstanceType" : "t2.nano",
         "ImageId" : { "Ref" : "AMIName" }
+        "KeyName" : { "Ref" : "KeyName" },
   		}
   	}
   },
