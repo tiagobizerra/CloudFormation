@@ -1,0 +1,104 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description" : "EC2 Amazon Linux March 2016 instance",
+
+  "Parameters" : {
+    "KeyName" : {
+      "Description" : "SSH key allowed to access the instance",
+      "Type" : "String",
+      "MinLength": "1",
+      "MaxLength": "255",
+      "AllowedPattern" : "[\\x20-\\x7E]*",
+      "Default" : "tiaglima-key-pair-euwest1",
+      "ConstraintDescription" : "can contain only ASCII characters."
+    },
+  "SSHLocation" : {
+      "Description" : "The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+   },
+    "SecurityGroupId" : {
+      "Description" : "Security group that will be used to create instances",
+      "Default" : "sg-bec7a5da",
+      "Type" : "AWS::EC2::SecurityGroup::Id"
+    },
+   "InstanceType" : {
+    "Type" : "String",
+    "Default" : "t2.micro",
+    "Description" : "Choose the instance type"
+   },
+   "AMIName" : {
+    "Description" : "Specify an AMI to create the instance",
+    "Default" : "ami-31328842",
+    "Type" : "AWS::EC2::Image::Id"
+   }
+  },
+  "Resources" : {
+  	"EC2Instance": {
+  		"Type" : "AWS::EC2::Instance",
+  		"Properties" : {
+  			"AvailabilityZone" : "eu-west-1a",
+  			"InstanceType" : "t2.nano",
+        "KeyName" : { "Ref" : "KeyName" },
+        "SecurityGroupIds" : [ { "Ref" : "SecurityGroupId" } ] ,
+        "ImageId" : { "Ref" : "AMIName" },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "exec &> /tmp/userdata.log\n\n",
+             "yum update -y aws-cfn-bootstrap\n",
+             "yum update -y \n",
+             "# Install the files and packages from the metadata\n",
+             "yum -y install tree telnet\n"
+            ]]}}
+  		}
+  	},
+    "EC2Instance2": {
+      "Type" : "AWS::EC2::Instance",
+      "DeletionPolicy" : "Retain",
+      "Properties" : {
+        "AvailabilityZone" : "eu-west-1a",
+        "InstanceType" : "t2.nano",
+        "KeyName" : { "Ref" : "KeyName" },
+        "SecurityGroupIds" : [ { "Ref" : "SecurityGroupId" } ] ,
+        "ImageId" : { "Ref" : "AMIName" },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "exec &> /tmp/userdata.log\n\n",
+             "yum update -y aws-cfn-bootstrap\n",
+             "yum update -y \n",
+             "# Install the files and packages from the metadata\n",
+             "yum -y install tree telnet\n"
+            ]]}}
+      }
+    },
+    "EC2Instance3": {
+      "Type" : "AWS::EC2::Instance",
+      "DependsOn" : "EC2Instance2",
+      "Properties" : {
+        "AvailabilityZone" : "eu-west-1a",
+        "InstanceType" : "t2.nano",
+        "KeyName" : { "Ref" : "KeyName" },
+        "SecurityGroupIds" : [ { "Ref" : "SecurityGroupId" } ] ,
+        "ImageId" : "ami-lalala",
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "exec &> /tmp/userdata.log\n\n",
+             "yum update -y aws-cfn-bootstrap\n",
+             "yum update -y \n",
+             "# Install the files and packages from the metadata\n",
+             "yum -y install tree telnet\n"
+            ]]}}
+      }
+    }
+  },
+  "Outputs" : {
+    "Instance" : {
+      "Value" : { "Ref" : "EC2Instance" }
+    }
+  }
+}
+

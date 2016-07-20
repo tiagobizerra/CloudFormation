@@ -1,0 +1,228 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "S3 Authentication test",
+  "Parameters": {
+    "KeyName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the web server",
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+    "ServerAccess": {
+      "Description": "CIDR IP range allowed to login to the NAT instance",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid CIDR range of the form x.x.x.x/x."
+    },
+    "SecurityGroupId": {
+      "Description": "Security group that will be used to create instances",
+      "Type": "AWS::EC2::SecurityGroup::Id"
+    }
+  },
+  "Mappings": {
+    "NatRegionMap": {
+      "us-east-1": {
+        "AMI": "ami-6869aa05"
+      },
+      "us-west-1": {
+        "AMI": "ami-31490d51"
+      },
+      "us-west-2": {
+        "AMI": "ami-7172b611"
+      },
+      "eu-west-1": {
+        "AMI": "ami-f9dd458a"
+      },
+      "eu-central-1": {
+        "AMI": "ami-ea26ce85"
+      },
+      "sa-east-1": {
+        "AMI": "ami-6dd04501"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-a59b49c6"
+      },
+      "ap-southeast-2": {
+        "AMI": "ami-dc361ebf"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-374db956"
+      },
+      "ap-northeast-2": {
+        "AMI": "ami-2b408b45"
+      },
+      "cn-north-1": {
+        "AMI": "ami-8e6aa0e3"
+      },
+      "ap-south-1": {
+        "AMI": "ami-ffbdd790"
+      }
+    }
+  },
+  "Resources": {
+    "InstanceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "RolePolicies": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "S3Download",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetObject"
+              ],
+              "Effect": "Allow",
+              "Resource": "arn:aws:s3:::tiaglima-bucket/index.html"
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "InstanceRole"
+          }
+        ]
+      }
+    },
+    "InstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "InstanceRole"
+          }
+        ]
+      }
+    },
+    "MyEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Metadata": {
+        "AWS::CloudFormation::Init": {
+          "configSets": {
+            "Install": [
+              "Install",
+              "Files",
+              "Services"
+            ]
+          },
+          "Install": {
+            "packages": {
+              "yum": {
+                "httpd": []
+              }
+            }
+          },
+          "Files": {
+            "files": {
+              "/var/www/html/index.html": {
+                "source": "http://tiaglima-bucket.s3.amazonaws.com/index.html",
+                "mode": "000400",
+                "owner": "apache",
+                "group": "apache",
+                "authentication": "S3AccessCreds"
+              }
+            }
+          },
+          "Services": {
+            "services": {
+              "sysvinit": {
+                "httpd": {
+                  "enabled": "true",
+                  "ensureRunning": "true"
+                }
+              }
+            }
+          }
+        },
+        "AWS::CloudFormation::Authentication": {
+          "S3AccessCreds": {
+            "type": "S3",
+            "roleName": {
+              "Ref": "InstanceRole"
+            }
+          }
+        }
+      },
+      "Properties": {
+        "IamInstanceProfile": {
+          "Ref": "InstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "ImageId": {
+          "Fn::FindInMap": [
+            "NatRegionMap",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "SecurityGroupIds": [
+          {
+            "Ref": "SecurityGroupId"
+          }
+        ],
+        "InstanceType": "t2.micro",	
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "",
+              [
+                "#!/bin/bash -xe\n",
+                "exec &> /tmp/userdata.log\n\n",
+                "yum update -y aws-cfn-bootstrap\n",
+                "# Install the files and packages from the metadata\n",
+                "/opt/aws/bin/cfn-init -v ",
+                "         --stack ",
+                {
+                  "Ref": "AWS::StackName"
+                },
+                "         --resource MyEC2Instance ",
+                "         --configsets Install ",
+                "         --region ",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n",
+                "/opt/aws/bin/cfn-signal -e $? ",
+                "         --stack ",
+                {
+                  "Ref": "AWS::StackName"
+                },
+                "         --resource MyEC2Instance ",
+                "         --region ",
+                {
+                  "Ref": "AWS::Region"
+                },
+                "\n"
+              ]
+            ]
+          }
+        }
+      }
+    }
+  }
+}

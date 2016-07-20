@@ -1,0 +1,108 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "SubnetID": {
+      "Type": "List<AWS::EC2::Subnet::Id>",
+      "Description": "Select a default subnet ID."
+    }
+  },
+  "Resources": {
+    "ECSCluster": {
+      "Type": "AWS::ECS::Cluster"
+    },
+    "taskdefinition": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "ContainerDefinitions": [
+          {
+            "Name": "simple-app",
+            "Cpu": "10",
+            "Essential": "true",
+            "Image": "httpd:2.4",
+            "Memory": "300",
+            "MountPoints": [
+              {
+                "ContainerPath": "/usr/local/apache2/htdocs",
+                "SourceVolume": "my-vol"
+              }
+            ],
+            "PortMappings": [
+              {
+                "HostPort": 80,
+                "ContainerPort": 80
+              }
+            ]
+          },
+          {
+            "Name": "busybox",
+            "Cpu": 10,
+            "Command": [
+              "/bin/sh -c \"while true; do echo '<html> <head> <title>Amazon ECS Sample App</title> <style>body {margin-top: 40px; background-color: #333;} </style> </head><body> <div style=color:white;text-align:center> <h1>Amazon ECS Sample App</h1> <h2>Congratulations!</h2> <p>Your application is now running on a container in Amazon ECS.</p>' > top; /bin/date > date ; echo '</div></body></html>' > bottom; cat top date bottom > /usr/local/apache2/htdocs/index.html ; sleep 1; done\""
+            ],
+            "EntryPoint": [
+              "sh",
+              "-c"
+            ],
+            "Essential": false,
+            "Image": "busybox",
+            "Memory": 200,
+            "VolumesFrom": [
+              {
+                "SourceContainer": "simple-app"
+              }
+            ]
+          }
+        ],
+        "Volumes": [
+          {
+            "Name": "my-vol"
+          }
+        ]
+      }
+    },
+    "EcsElasticLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "Subnets": {
+          "Ref": "SubnetID"
+        },
+        "Listeners": [
+          {
+            "LoadBalancerPort": "80",
+            "InstancePort": "80",
+            "Protocol": "HTTP"
+          }
+        ],
+        "HealthCheck": {
+          "Target": "HTTP:80/",
+          "HealthyThreshold": "2",
+          "UnhealthyThreshold": "10",
+          "Interval": "30",
+          "Timeout": "5"
+        }
+      }
+    },
+    "service": {
+      "Type": "AWS::ECS::Service",
+      "Properties": {
+        "Cluster": {
+          "Ref": "ECSCluster"
+        },
+        "DesiredCount": "1",
+        "LoadBalancers": [
+          {
+            "ContainerName": "simple-app",
+            "ContainerPort": "80",
+            "LoadBalancerName": {
+              "Ref": "EcsElasticLoadBalancer"
+            }
+          }
+        ],
+        "Role": "ecsInstanceRole",
+        "TaskDefinition": {
+          "Ref": "taskdefinition"
+        }
+      }
+    }
+  }
+}
