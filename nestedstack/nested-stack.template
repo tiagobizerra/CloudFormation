@@ -1,13 +1,31 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Nested stack example",
+  "Parameters": {
+    "MyVPC": {
+      "Description": "VPC to be used to allocate resources",
+      "Type": "String"
+    },
+    "MyInstance": {
+      "Description": "Instance created in the Main template",
+      "Type": "String"
+    }
+  },
   "Resources": {
     "MyEIP": {
       "Type": "AWS::EC2::EIP",
       "Properties": {
-        "Domain": {
-          "Ref": "MyVPC"
+        "InstanceId": {
+          "Ref": "MyInstance"
         }
+      }
+    }
+  },
+  "Outputs": {
+    "MyEIP": {
+      "Description": "The Elastic IP address",
+      "Value": {
+        "Ref": "MyEIP"
       }
     }
   }

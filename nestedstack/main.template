@@ -10,6 +10,14 @@
       "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
       "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
     },
+    "SubnetCidrBlock": {
+      "Description": "IP Address range that will be used in the VPC",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    },
     "KeyName": {
       "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
       "Type": "AWS::EC2::KeyPair::KeyName",
@@ -77,6 +85,18 @@
         "EnableDnsHostnames": true
       }
     },
+    "MySubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVPC"
+        },
+        "CidrBlock": {
+          "Ref": "SubnetCidrBlock"
+        },
+        "MapPublicIpOnLaunch": "true"
+      }
+    },
     "MySecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -124,6 +144,70 @@
         }
       }
     },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": {
+              "Ref": "AWS::StackId"
+            }
+          }
+        ]
+      }
+    },
+    "AttachGateway": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVPC"
+        },
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVPC"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": {
+              "Ref": "AWS::StackId"
+            }
+          }
+        ]
+      }
+    },
+    "Route": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "AttachGateway",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+    "SubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "MySubnet"
+        },
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        }
+      }
+    },
     "MyInstance": {
       "Type": "AWS::EC2::Instance",
       "Properties": {
@@ -142,6 +226,9 @@
         "InstanceType": {
           "Ref": "InstanceType"
         },
+        "SubnetId": {
+          "Ref": "MySubnet"
+        },
         "SecurityGroupIds": [
           {
             "Ref": "MySecurityGroup"
@@ -150,15 +237,35 @@
       }
     },
     "MyNestedStack": {
-      "DependsOn" : [ "MyVPC" ],
+      "DependsOn": [
+        "MyVPC",
+        "MyInstance"
+      ],
       "Type": "AWS::CloudFormation::Stack",
       "Properties": {
-        "NotificationARNs": [ "arn:aws:sns:eu-west-1:857285822921:tiaglima" ],
-        "TemplateURL": "https://s3.amazon.com/tiaglima-bucket/cloudformation/nested-stack.template",
+        "NotificationARNs": [
+          "arn:aws:sns:eu-west-1:857285822921:tiaglima"
+        ],
+        "TemplateURL": "https://s3-eu-west-1.amazonaws.com/tiaglima-bucket/cloudformation/nested-stack.template",
         "TimeoutInMinutes": "5",
-        "Parameters" : {
-          "MyVPC" : {"Ref" : "MyVPC"}
+        "Parameters": {
+          "MyVPC": {
+            "Ref": "MyVPC"
+          },
+          "MyInstance": {
+            "Ref": "MyInstance"
+          }
         }
+      }
+    }
+  },
+  "Outputs": {
+    "MyEIP": {
+      "Value": {
+        "Fn::GetAtt": [
+          "MyNestedStack",
+          "Outputs.MyEIP"
+        ]
       }
     }
   }
