@@ -1,0 +1,24 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Nested stack test",
+
+  "Metadata" : {
+  },
+
+  "Parameters" : {
+  },
+
+  "Mappings" : {
+  },
+
+  "Conditions" : {
+  },
+
+  "Resources" : {
+  },
+
+  "Outputs" : {
+  }
+  
+}
