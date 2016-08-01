@@ -1,4 +1,14 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "Nested stack example",
+  "Resources": {
+    "MyEIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": {
+          "Ref": "MyVPC"
+        }
+      }
+    }
+  }
 }
