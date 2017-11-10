@@ -29,7 +29,7 @@
    "InstanceType" : {
     "Type" : "String",
     "Default" : "t2.micro",
-    "Description" : "Choose the instance type"
+    "Description" : "Choose the instance type, please:"
    },
    "AMIName" : {
     "Description" : "Specify an AMI to create the instance",
